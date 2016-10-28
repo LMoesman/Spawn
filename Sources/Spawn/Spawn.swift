@@ -87,6 +87,18 @@ public final class Spawn {
         pthread_create(&tid, nil, callback, &threadInfo)
     }
 
+    public func waitForExit() -> Int32 {
+        var status: Int32 = 0
+        
+        if let tid = tid {
+            pthread_join(tid, nil)
+        }
+        
+        waitpid(pid, &status, 0)
+        
+        return status
+    }
+
     deinit {
         var status: Int32 = 0
 

@@ -91,9 +91,13 @@ public final class Spawn {
     public func waitForExit() -> Int32 {
         var status: Int32 = 0
         
+        #if os(OSX)
         if let tid = tid {
             pthread_join(tid, nil)
         }
+        #else
+        pthread_join(tid, nil)
+        #endif
         
         waitpid(pid, &status, 0)
         

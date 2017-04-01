@@ -83,8 +83,19 @@ public final class Spawn {
             dynamicBuffer.deallocate(capacity: bufferSize)
             return nil
         }
+        func optionalCallback(x: UnsafeMutableRawPointer?) -> UnsafeMutableRawPointer? {
+            if let x = x {
+                return callback(x: x)
+            }
+            return nil
+        }
         threadInfo = ThreadInfo(outputPipe: &outputPipe, output: output)
+        
+        #if os(OSX)
         pthread_create(&tid, nil, callback, &threadInfo)
+        #else
+        pthread_create(&tid, nil, optionalCallback, &threadInfo)
+        #endif
     }
 
     @discardableResult

@@ -83,18 +83,35 @@ public final class Spawn {
             dynamicBuffer.deallocate(capacity: bufferSize)
             return nil
         }
-        func optionalCallback(x: UnsafeMutableRawPointer?) -> UnsafeMutableRawPointer? {
+        
+        func linuxCallback(x: UnsafeMutableRawPointer?) -> UnsafeMutableRawPointer? {
             if let x = x {
-                return callback(x: x)
+                let threadInfo = x.assumingMemoryBound(to: Spawn.ThreadInfo.self).pointee
+                let outputPipe = threadInfo.outputPipe
+                close(outputPipe[1])
+                let bufferSize: size_t = 1024 * 8
+                let dynamicBuffer = UnsafeMutablePointer<UInt8>.allocate(capacity: bufferSize)
+                while true {
+                    let amtRead = read(outputPipe[0], dynamicBuffer, bufferSize)
+                    if amtRead <= 0 { break }
+                    let array = Array(UnsafeBufferPointer(start: dynamicBuffer, count: amtRead))
+                    let tmp = array  + [UInt8(0)]
+                    tmp.withUnsafeBufferPointer { ptr in
+                        let str = String(cString: unsafeBitCast(ptr.baseAddress, to: UnsafePointer<CChar>.self))
+                        threadInfo.output?(str)
+                    }
+                }
+                dynamicBuffer.deallocate(capacity: bufferSize)
             }
             return nil
         }
+        
         threadInfo = ThreadInfo(outputPipe: &outputPipe, output: output)
         
         #if os(OSX)
         pthread_create(&tid, nil, callback, &threadInfo)
         #else
-        pthread_create(&tid, nil, optionalCallback, &threadInfo)
+        pthread_create(&tid, nil, linuxCallback, &threadInfo)
         #endif
     }
 

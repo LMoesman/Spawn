@@ -8,6 +8,6 @@ let package = Package(
         .library(name: "Spawn", targets: ["Spawn"])
     ],
     targets: [
-        .targets(name: "Spawn", dependencies: [])
+        .target(name: "Spawn", dependencies: [])
     ]
 )

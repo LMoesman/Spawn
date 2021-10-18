@@ -101,7 +101,7 @@ public final class Spawn {
                         threadInfo.output?(str)
                     }
                 }
-                dynamicBuffer.deallocate(capacity: bufferSize)
+                dynamicBuffer.deallocate()
             }
             return nil
         }

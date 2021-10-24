@@ -16,6 +16,9 @@ public final class Spawn {
     /// The arguments to be executed.
     let args: [String]
 
+    /// The environment variables to use during execution
+    let envs: [String:String]
+    
     /// Closure to be executed when there is
     /// some data on stdout/stderr streams.
     private var output: OutputClosure?
@@ -35,8 +38,10 @@ public final class Spawn {
     private let process = "/bin/sh"
     private var outputPipe: [Int32] = [-1, -1]
 
-    public init(args: [String], output: OutputClosure? = nil) throws {
-        (self.args, self.output)  = (args, output)
+    public init(args: [String], envs: [String: String] = [:], output: OutputClosure? = nil) throws {
+        self.args = args
+        self.envs = envs
+        self.output = output
 
         if pipe(&outputPipe) < 0 {
             throw SpawnError.CouldNotOpenPipe
@@ -49,9 +54,11 @@ public final class Spawn {
         posix_spawn_file_actions_addclose(&childFDActions, outputPipe[1])
 
         let argv: [UnsafeMutablePointer<CChar>?] = args.map{ $0.withCString(strdup) }
+        let envp: [UnsafeMutablePointer<CChar>?] = envs.map{ "\($0.key)=\($0.value)".withCString(strdup) }
         defer { for case let arg? in argv { free(arg) } }
-
-        if posix_spawn(&pid, argv[0], &childFDActions, nil, argv + [nil], nil) < 0 {
+        defer { for case let env? in envp { free(env) } }
+        
+        if posix_spawn(&pid, argv[0], &childFDActions, nil, argv + [nil], envp + [nil]) < 0 {
             throw SpawnError.CouldNotSpawn
         }
         watchStreams()
